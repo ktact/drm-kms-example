@@ -77,6 +77,56 @@ This program **requires virtual console access** to function properly. Running f
 - **Environment Detection**: Automatic handling of console vs desktop
 - **Educational**: Clean, commented code for learning DRM/KMS
 
+## DRM/KMS Display Hardware Pipeline
+
+```
+     CPU Memory                GPU/Display Controller                Physical Output
+     ┌─────────────┐          ┌─────────────────────────────────┐    ┌─────────────┐
+     │             │          │                                 │    │             │
+     │ Framebuffer │ ────────▶│ CRTC (Scanout Engine)          │    │   Monitor   │
+     │  (Pixels)   │          │ - Reads pixel data line by line │    │             │
+     │             │          │ - Controls refresh timing       │    │ ┌─────────┐ │
+     └─────────────┘          │ - Sends to encoder              │    │ │ Screen  │ │
+           ▲                  │                                 │    │ │ Display │ │
+           │                  │          │                      │    │ └─────────┘ │
+     ┌─────────────┐          │          ▼                      │    └─────────────┘
+     │ Application │          │ ┌─────────────────┐             │           ▲
+     │ (triangle.c)│          │ │ Encoder         │             │           │
+     │ - Draws     │          │ │ - TMDS (HDMI)   │             │           │
+     │   pixels    │          │ │ - DisplayPort   │ ───────────────────────┘
+     │ - Updates   │          │ │ - Analog (VGA)  │             │
+     │   memory    │          │ │ - Signal format │             │
+     └─────────────┘          │ │   conversion    │             │
+           │                  │ └─────────────────┘             │
+           │                  │          ▲                      │
+           │                  │          │                      │
+           │                  │ ┌─────────────────┐             │
+           │                  │ │ Connector       │             │
+           │                  │ │ - HDMI port     │             │
+           │                  │ │ - DisplayPort   │             │
+           │                  │ │ - VGA port      │             │
+           │                  │ │ - Physical I/O  │             │
+           │                  │ └─────────────────┘             │
+           │                  └─────────────────────────────────┘
+           │
+    ┌─────────────────┐
+    │ DRM/KMS API     │
+    │ - Device setup  │
+    │ - Mode setting  │
+    │ - Buffer mgmt   │
+    │ - Display ctrl  │
+    └─────────────────┘
+```
+
+**Data Flow:**
+1. Application writes pixels to framebuffer (CPU memory)
+2. CRTC scans framebuffer at display refresh rate (60Hz, etc.)
+3. Encoder converts digital data to appropriate signal format
+4. Connector sends signal through physical cable to monitor
+5. Monitor displays the image on screen
+
+*DRM/KMS manages this entire pipeline through kernel APIs.*
+
 ## Technical Details
 
 - **API**: Direct DRM/KMS calls (no OpenGL/Vulkan)
